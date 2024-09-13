@@ -69,29 +69,26 @@ def process_frame(input_frame, qr_detector):
         active_qr = {"color": "", "timestamp": 0, "person_id": None}
 
     if active_qr["color"] != "":
-        for bbox, person_id in person_bboxes:
-            x1, y1, x2, y2 = bbox
-            cv2.rectangle(processed_frame, (x1, y1), (x2, y2), (128, 0, 128), 2)
-            cv2.putText(processed_frame, f"Futuro Cachimbo UTEC (ID: {person_id})", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (128, 0, 128), 2)
-        tracked_person = next((bbox for bbox, person_id in person_bboxes if person_id == active_qr["person_id"]), None)
+        # Convertir toda la imagen a escala de grises
+        gray_frame = cv2.cvtColor(input_frame, cv2.COLOR_BGR2GRAY)
+        processed_frame = cv2.cvtColor(gray_frame, cv2.COLOR_GRAY2BGR)
         
-        if tracked_person is not None:
-            x1, y1, x2, y2 = tracked_person
-            color_map = {"RED": (0, 0, 255), "GREEN": (0, 255, 0), "BLUE": (255, 0, 0)}
-            qr_color = color_map.get(active_qr["color"], (255, 0, 255))
-            
-            mask = np.zeros(input_frame.shape[:2], dtype=np.uint8)
-            cv2.rectangle(mask, (x1, y1), (x2, y2), 255, -1)
-            colored_person = input_frame.copy()
-            colored_person[mask == 255] = qr_color
-            
-            processed_frame = cv2.addWeighted(processed_frame, 0.7, colored_person, 0.3, 0)
-            cv2.rectangle(processed_frame, (x1, y1), (x2, y2), qr_color, 2)
-            cv2.putText(processed_frame, f"Futuro Cachimbo UTEC (ID: {active_qr['person_id']})", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, qr_color, 2)
+        # Aplicar el color solo a la persona detectada
+        for bbox, person_id in person_bboxes:
+            if person_id == active_qr["person_id"]:
+                x1, y1, x2, y2 = bbox
+                color_map = {"RED": (0, 0, 255), "GREEN": (0, 255, 0), "BLUE": (255, 0, 0)}
+                qr_color = color_map.get(active_qr["color"], (255, 0, 255))
+                
+                mask = np.zeros(input_frame.shape[:2], dtype=np.uint8)
+                cv2.rectangle(mask, (x1, y1), (x2, y2), 255, -1)
+                colored_person = np.zeros_like(processed_frame)
+                colored_person[mask == 255] = qr_color
+                
+                processed_frame = cv2.addWeighted(processed_frame, 0.7, colored_person, 0.3, 0)
+                cv2.rectangle(processed_frame, (x1, y1), (x2, y2), qr_color, 2)
+                cv2.putText(processed_frame, f"Futuro Cachimbo UTEC (ID: {active_qr['person_id']})", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, qr_color, 2)
     else:
-        processed_frame = cv2.cvtColor(input_frame, cv2.COLOR_BGR2GRAY)
-        processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_GRAY2BGR)
-
         for bbox, person_id in person_bboxes:
             x1, y1, x2, y2 = bbox
             cv2.rectangle(processed_frame, (x1, y1), (x2, y2), (128, 0, 128), 2)
@@ -123,4 +120,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
